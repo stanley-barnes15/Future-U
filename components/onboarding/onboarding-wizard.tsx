@@ -1,75 +1,85 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRight, ArrowLeft, Sparkles, Wallet, Heart, Target, Loader2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Slider } from '@/components/ui/slider'
-import { createClient } from '@/lib/supabase/client'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  ArrowRight,
+  ArrowLeft,
+  Sparkles,
+  Wallet,
+  Heart,
+  Target,
+  Loader2,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { createClient } from "@/lib/supabase/client";
 
-type OnboardingStep = 'welcome' | 'basics' | 'finances' | 'health' | 'goals'
+type OnboardingStep = "welcome" | "basics" | "finances" | "health" | "goals";
+
+const [submitError, setSubmitError] = useState<string | null>(null);
 
 const steps: { id: OnboardingStep; title: string; icon: React.ReactNode }[] = [
-  { id: 'welcome', title: 'Welcome', icon: <Sparkles className="h-5 w-5" /> },
-  { id: 'basics', title: 'About You', icon: <Target className="h-5 w-5" /> },
-  { id: 'finances', title: 'Finances', icon: <Wallet className="h-5 w-5" /> },
-  { id: 'health', title: 'Health', icon: <Heart className="h-5 w-5" /> },
-  { id: 'goals', title: 'Goals', icon: <Target className="h-5 w-5" /> },
-]
+  { id: "welcome", title: "Welcome", icon: <Sparkles className="h-5 w-5" /> },
+  { id: "basics", title: "About You", icon: <Target className="h-5 w-5" /> },
+  { id: "finances", title: "Finances", icon: <Wallet className="h-5 w-5" /> },
+  { id: "health", title: "Health", icon: <Heart className="h-5 w-5" /> },
+  { id: "goals", title: "Goals", icon: <Target className="h-5 w-5" /> },
+];
 
 interface OnboardingWizardProps {
-  userId: string
-  onComplete: () => void
+  userId: string;
+  onComplete: () => void;
 }
 
-export function OnboardingWizard({ userId, onComplete }: OnboardingWizardProps) {
-  const router = useRouter()
-  const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome')
-  const [loading, setLoading] = useState(false)
-  
+export function OnboardingWizard({
+  userId,
+  onComplete,
+}: OnboardingWizardProps) {
+  const router = useRouter();
+  const [currentStep, setCurrentStep] = useState<OnboardingStep>("welcome");
+  const [loading, setLoading] = useState(false);
+
   const [formData, setFormData] = useState({
-    name: '',
+    name: "",
     age: 25,
     monthlyIncome: 3000,
     monthlySavings: 500,
     savingsGoal: 100000,
     exerciseFrequency: 3,
     sleepHours: 7,
-  })
-  
-  const currentStepIndex = steps.findIndex((s) => s.id === currentStep)
-  
+  });
+
+  const currentStepIndex = steps.findIndex((s) => s.id === currentStep);
+
   const handleNext = async () => {
+    setSubmitError(null);
     if (currentStepIndex < steps.length - 1) {
-      setCurrentStep(steps[currentStepIndex + 1].id)
+      setCurrentStep(steps[currentStepIndex + 1].id);
     } else {
       // Complete onboarding - save to database
-      setLoading(true)
-      
-      const supabase = createClient()
-      
+      setLoading(true);
+
+      const supabase = createClient();
+
       // Update profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
+      const { error: profileError } = await supabase.from("profiles").upsert(
+        {
+          id: userId,
           full_name: formData.name,
           onboarding_completed: true,
-        })
-        .eq('id', userId)
-      
-      if (profileError) {
-        console.error('Error updating profile:', profileError)
-        setLoading(false)
-        return
-      }
-      
+        },
+        {
+          onConflict: "id",
+        }
+      );
+
       // Save habits
-      const { error: habitsError } = await supabase
-        .from('user_habits')
-        .upsert({
+      const { error: habitsError } = await supabase.from("user_habits").upsert(
+        {
           user_id: userId,
           current_age: formData.age,
           monthly_income: formData.monthlyIncome,
@@ -77,35 +87,38 @@ export function OnboardingWizard({ userId, onComplete }: OnboardingWizardProps) 
           savings_goal: formData.savingsGoal,
           exercise_frequency: formData.exerciseFrequency,
           sleep_hours: formData.sleepHours,
-        }, {
-          onConflict: 'user_id'
-        })
-      
+        },
+        {
+          onConflict: "user_id",
+        }
+      );
+
       if (habitsError) {
-        console.error('Error saving habits:', habitsError)
-        setLoading(false)
-        return
+        setSubmitError("We could not save your habits yet. Please try again.");
+        console.error("Error saving habits:", habitsError);
+        setLoading(false);
+        return;
       }
-      
-      setLoading(false)
-      onComplete()
-      router.refresh()
+
+      setLoading(false);
+      onComplete();
+      router.refresh();
     }
-  }
-  
+  };
+
   const handleBack = () => {
     if (currentStepIndex > 0) {
-      setCurrentStep(steps[currentStepIndex - 1].id)
+      setCurrentStep(steps[currentStepIndex - 1].id);
     }
-  }
-  
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-chart-2/5 rounded-full blur-3xl" />
       </div>
-      
+
       <div className="w-full max-w-lg relative z-10">
         {/* Progress indicator */}
         <div className="flex items-center justify-center gap-2 mb-8">
@@ -113,16 +126,18 @@ export function OnboardingWizard({ userId, onComplete }: OnboardingWizardProps) 
             <div
               key={step.id}
               className={`flex items-center gap-2 ${
-                index <= currentStepIndex ? 'text-primary' : 'text-muted-foreground'
+                index <= currentStepIndex
+                  ? "text-primary"
+                  : "text-muted-foreground"
               }`}
             >
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
                   index === currentStepIndex
-                    ? 'bg-primary text-primary-foreground'
+                    ? "bg-primary text-primary-foreground"
                     : index < currentStepIndex
-                    ? 'bg-primary/20 text-primary'
-                    : 'bg-muted text-muted-foreground'
+                    ? "bg-primary/20 text-primary"
+                    : "bg-muted text-muted-foreground"
                 }`}
               >
                 {index + 1}
@@ -130,14 +145,14 @@ export function OnboardingWizard({ userId, onComplete }: OnboardingWizardProps) 
               {index < steps.length - 1 && (
                 <div
                   className={`w-8 h-0.5 ${
-                    index < currentStepIndex ? 'bg-primary' : 'bg-muted'
+                    index < currentStepIndex ? "bg-primary" : "bg-muted"
                   }`}
                 />
               )}
             </div>
           ))}
         </div>
-        
+
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}
@@ -147,26 +162,22 @@ export function OnboardingWizard({ userId, onComplete }: OnboardingWizardProps) 
             transition={{ duration: 0.3 }}
             className="bg-card border border-border rounded-2xl p-8"
           >
-            {currentStep === 'welcome' && (
-              <WelcomeStep />
-            )}
-            
-            {currentStep === 'basics' && (
+            {currentStep === "welcome" && <WelcomeStep />}
+
+            {currentStep === "basics" && (
               <BasicsStep formData={formData} setFormData={setFormData} />
             )}
-            
-            {currentStep === 'finances' && (
+
+            {currentStep === "finances" && (
               <FinancesStep formData={formData} setFormData={setFormData} />
             )}
-            
-            {currentStep === 'health' && (
+
+            {currentStep === "health" && (
               <HealthStep formData={formData} setFormData={setFormData} />
             )}
-            
-            {currentStep === 'goals' && (
-              <GoalsStep formData={formData} />
-            )}
-            
+
+            {currentStep === "goals" && <GoalsStep formData={formData} />}
+
             {/* Navigation */}
             <div className="flex justify-between mt-8">
               <Button
@@ -178,13 +189,15 @@ export function OnboardingWizard({ userId, onComplete }: OnboardingWizardProps) 
                 <ArrowLeft className="h-4 w-4" />
                 Back
               </Button>
-              
+
               <Button onClick={handleNext} disabled={loading} className="gap-2">
                 {loading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <>
-                    {currentStepIndex === steps.length - 1 ? 'See Your Future' : 'Continue'}
+                    {currentStepIndex === steps.length - 1
+                      ? "See Your Future"
+                      : "Continue"}
                     <ArrowRight className="h-4 w-4" />
                   </>
                 )}
@@ -194,7 +207,7 @@ export function OnboardingWizard({ userId, onComplete }: OnboardingWizardProps) 
         </AnimatePresence>
       </div>
     </div>
-  )
+  );
 }
 
 function WelcomeStep() {
@@ -208,16 +221,16 @@ function WelcomeStep() {
           Meet Your Future Self
         </h1>
         <p className="text-muted-foreground mt-2 text-balance leading-relaxed">
-          See how your daily choices today shape who you become tomorrow. 
+          See how your daily choices today shape who you become tomorrow.
           {"Let's"} visualize your potential in just 60 seconds.
         </p>
       </div>
       <div className="grid grid-cols-2 gap-4 pt-4">
         {[
-          { icon: <Wallet className="h-5 w-5" />, label: 'Finances' },
-          { icon: <Heart className="h-5 w-5" />, label: 'Health' },
-          { icon: <Target className="h-5 w-5" />, label: 'Goals' },
-          { icon: <Sparkles className="h-5 w-5" />, label: 'Life' },
+          { icon: <Wallet className="h-5 w-5" />, label: "Finances" },
+          { icon: <Heart className="h-5 w-5" />, label: "Health" },
+          { icon: <Target className="h-5 w-5" />, label: "Goals" },
+          { icon: <Sparkles className="h-5 w-5" />, label: "Life" },
         ].map((item) => (
           <div
             key={item.label}
@@ -229,28 +242,30 @@ function WelcomeStep() {
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 interface StepProps {
   formData: {
-    name: string
-    age: number
-    monthlyIncome: number
-    monthlySavings: number
-    savingsGoal: number
-    exerciseFrequency: number
-    sleepHours: number
-  }
-  setFormData: React.Dispatch<React.SetStateAction<{
-    name: string
-    age: number
-    monthlyIncome: number
-    monthlySavings: number
-    savingsGoal: number
-    exerciseFrequency: number
-    sleepHours: number
-  }>>
+    name: string;
+    age: number;
+    monthlyIncome: number;
+    monthlySavings: number;
+    savingsGoal: number;
+    exerciseFrequency: number;
+    sleepHours: number;
+  };
+  setFormData: React.Dispatch<
+    React.SetStateAction<{
+      name: string;
+      age: number;
+      monthlyIncome: number;
+      monthlySavings: number;
+      savingsGoal: number;
+      exerciseFrequency: number;
+      sleepHours: number;
+    }>
+  >;
 }
 
 function BasicsStep({ formData, setFormData }: StepProps) {
@@ -258,9 +273,11 @@ function BasicsStep({ formData, setFormData }: StepProps) {
     <div className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold">About You</h2>
-        <p className="text-muted-foreground mt-1">{"Let's"} start with the basics</p>
+        <p className="text-muted-foreground mt-1">
+          {"Let's"} start with the basics
+        </p>
       </div>
-      
+
       <div className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="name">{"What's"} your name?</Label>
@@ -272,24 +289,28 @@ function BasicsStep({ formData, setFormData }: StepProps) {
             className="bg-input border-border"
           />
         </div>
-        
+
         <div className="space-y-3">
           <Label>How old are you?</Label>
           <div className="flex items-center gap-4">
             <Slider
               value={[formData.age]}
-              onValueChange={([value]) => setFormData({ ...formData, age: value })}
+              onValueChange={([value]) =>
+                setFormData({ ...formData, age: value })
+              }
               min={18}
               max={70}
               step={1}
               className="flex-1"
             />
-            <span className="w-16 text-right font-mono text-lg">{formData.age} yrs</span>
+            <span className="w-16 text-right font-mono text-lg">
+              {formData.age} yrs
+            </span>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function FinancesStep({ formData, setFormData }: StepProps) {
@@ -297,16 +318,20 @@ function FinancesStep({ formData, setFormData }: StepProps) {
     <div className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold">Your Finances</h2>
-        <p className="text-muted-foreground mt-1">{"Let's"} understand your money habits</p>
+        <p className="text-muted-foreground mt-1">
+          {"Let's"} understand your money habits
+        </p>
       </div>
-      
+
       <div className="space-y-5">
         <div className="space-y-3">
           <Label>Monthly Income</Label>
           <div className="flex items-center gap-4">
             <Slider
               value={[formData.monthlyIncome]}
-              onValueChange={([value]) => setFormData({ ...formData, monthlyIncome: value })}
+              onValueChange={([value]) =>
+                setFormData({ ...formData, monthlyIncome: value })
+              }
               min={1000}
               max={20000}
               step={100}
@@ -317,13 +342,15 @@ function FinancesStep({ formData, setFormData }: StepProps) {
             </span>
           </div>
         </div>
-        
+
         <div className="space-y-3">
           <Label>Monthly Savings</Label>
           <div className="flex items-center gap-4">
             <Slider
               value={[formData.monthlySavings]}
-              onValueChange={([value]) => setFormData({ ...formData, monthlySavings: value })}
+              onValueChange={([value]) =>
+                setFormData({ ...formData, monthlySavings: value })
+              }
               min={0}
               max={formData.monthlyIncome}
               step={50}
@@ -334,16 +361,21 @@ function FinancesStep({ formData, setFormData }: StepProps) {
             </span>
           </div>
           <p className="text-xs text-muted-foreground">
-            {Math.round((formData.monthlySavings / formData.monthlyIncome) * 100)}% savings rate
+            {Math.round(
+              (formData.monthlySavings / formData.monthlyIncome) * 100
+            )}
+            % savings rate
           </p>
         </div>
-        
+
         <div className="space-y-3">
           <Label>Savings Goal</Label>
           <div className="flex items-center gap-4">
             <Slider
               value={[formData.savingsGoal]}
-              onValueChange={([value]) => setFormData({ ...formData, savingsGoal: value })}
+              onValueChange={([value]) =>
+                setFormData({ ...formData, savingsGoal: value })
+              }
               min={10000}
               max={1000000}
               step={10000}
@@ -356,7 +388,7 @@ function FinancesStep({ formData, setFormData }: StepProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function HealthStep({ formData, setFormData }: StepProps) {
@@ -364,16 +396,20 @@ function HealthStep({ formData, setFormData }: StepProps) {
     <div className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold">Your Health</h2>
-        <p className="text-muted-foreground mt-1">Physical habits shape your future</p>
+        <p className="text-muted-foreground mt-1">
+          Physical habits shape your future
+        </p>
       </div>
-      
+
       <div className="space-y-5">
         <div className="space-y-3">
           <Label>Exercise per week</Label>
           <div className="flex items-center gap-4">
             <Slider
               value={[formData.exerciseFrequency]}
-              onValueChange={([value]) => setFormData({ ...formData, exerciseFrequency: value })}
+              onValueChange={([value]) =>
+                setFormData({ ...formData, exerciseFrequency: value })
+              }
               min={0}
               max={7}
               step={1}
@@ -388,13 +424,15 @@ function HealthStep({ formData, setFormData }: StepProps) {
             <span>Athletic</span>
           </div>
         </div>
-        
+
         <div className="space-y-3">
           <Label>Average sleep hours</Label>
           <div className="flex items-center gap-4">
             <Slider
               value={[formData.sleepHours]}
-              onValueChange={([value]) => setFormData({ ...formData, sleepHours: value })}
+              onValueChange={([value]) =>
+                setFormData({ ...formData, sleepHours: value })
+              }
               min={4}
               max={10}
               step={0.5}
@@ -412,10 +450,10 @@ function HealthStep({ formData, setFormData }: StepProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-function GoalsStep({ formData }: { formData: StepProps['formData'] }) {
+function GoalsStep({ formData }: { formData: StepProps["formData"] }) {
   return (
     <div className="space-y-6">
       <div className="text-center">
@@ -424,29 +462,35 @@ function GoalsStep({ formData }: { formData: StepProps['formData'] }) {
           {"Here's"} a preview of what {"we'll"} calculate
         </p>
       </div>
-      
+
       <div className="space-y-4">
         <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
-          <h3 className="font-semibold text-primary mb-2">Financial Projection</h3>
+          <h3 className="font-semibold text-primary mb-2">
+            Financial Projection
+          </h3>
           <p className="text-sm text-muted-foreground">
-            At ${formData.monthlySavings.toLocaleString()}/month with 7% returns, {"we'll"} show your wealth trajectory over 1, 5, and 10 years.
+            At ${formData.monthlySavings.toLocaleString()}/month with 7%
+            returns, {"we'll"} show your wealth trajectory over 1, 5, and 10
+            years.
           </p>
         </div>
-        
+
         <div className="p-4 rounded-lg bg-chart-2/10 border border-chart-2/20">
           <h3 className="font-semibold text-chart-2 mb-2">Health Forecast</h3>
           <p className="text-sm text-muted-foreground">
-            Based on {formData.exerciseFrequency}x exercise/week and {formData.sleepHours}hrs sleep, {"we'll"} project your health score.
+            Based on {formData.exerciseFrequency}x exercise/week and{" "}
+            {formData.sleepHours}hrs sleep, {"we'll"} project your health score.
           </p>
         </div>
-        
+
         <div className="p-4 rounded-lg bg-chart-3/10 border border-chart-3/20">
           <h3 className="font-semibold text-chart-3 mb-2">Life Goals</h3>
           <p className="text-sm text-muted-foreground">
-            {"We'll"} help you visualize and track progress toward your biggest life goals.
+            {"We'll"} help you visualize and track progress toward your biggest
+            life goals.
           </p>
         </div>
       </div>
     </div>
-  )
+  );
 }
