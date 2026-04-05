@@ -62,7 +62,7 @@ export default function SignUpPage() {
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Sparkles className="w-8 h-8 text-primary" />
-            <span className="text-2xl font-bold text-foreground">Future You</span>
+            <span className="text-2xl font-bold text-foreground">Future U</span>
           </div>
           <CardTitle className="text-xl text-foreground">Create your account</CardTitle>
           <CardDescription className="text-muted-foreground">

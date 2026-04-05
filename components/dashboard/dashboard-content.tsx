@@ -36,9 +36,9 @@ export function DashboardContent({ user, profile, subscription, initialHabits, i
 
   if (showOnboarding) {
     return (
-      <OnboardingWizard
+      <OnboardingWizard 
         userId={user.id}
-        onComplete={() => setShowOnboarding(false)}
+        onComplete={() => setShowOnboarding(false)} 
       />
     )
   }
@@ -49,15 +49,15 @@ export function DashboardContent({ user, profile, subscription, initialHabits, i
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="w-6 h-6 text-primary" />
-            <span className="text-xl font-bold text-foreground">Future You</span>
+            <span className="text-xl font-bold text-foreground">Future U</span>
             {isPro && (
               <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full font-medium">
                 PRO
               </span>
             )}
           </div>
-          <UserNav
-            user={user}
+          <UserNav 
+            user={user} 
             profile={profile}
             plan={plan}
           />
@@ -96,11 +96,11 @@ export function DashboardContent({ user, profile, subscription, initialHabits, i
               <TabsTrigger value="timeline">Future Timeline</TabsTrigger>
               <TabsTrigger value="scenarios">Scenario Comparison</TabsTrigger>
             </TabsList>
-
+            
             <TabsContent value="timeline" className="mt-6">
               <FutureTimeline isPro={isPro} initialHabits={initialHabits} />
             </TabsContent>
-
+            
             <TabsContent value="scenarios" className="mt-6">
               <ScenarioComparison isPro={isPro} initialHabits={initialHabits} />
             </TabsContent>

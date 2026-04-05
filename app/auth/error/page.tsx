@@ -14,7 +14,7 @@ export default function AuthErrorPage() {
         <CardHeader>
           <div className="flex items-center justify-center gap-2 mb-4">
             <Sparkles className="w-8 h-8 text-primary" />
-            <span className="text-2xl font-bold text-foreground">Future You</span>
+            <span className="text-2xl font-bold text-foreground">Future U</span>
           </div>
           
           <div className="flex justify-center mb-4">
