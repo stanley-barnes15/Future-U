@@ -3,8 +3,8 @@
 import { motion } from 'framer-motion'
 import { Sparkles, X, Wallet, Heart, Target, Lightbulb } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useState, useEffect, useMemo } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState, useMemo } from 'react'
+import { UserHabitsRow } from '@/lib/types'
 
 interface Nudge {
   message: string
@@ -69,43 +69,20 @@ const nudgeTemplates: Nudge[] = [
   },
 ]
 
-export function DailyNudge() {
+interface DailyNudgeProps {
+  initialHabits: UserHabitsRow | null
+}
+
+export function DailyNudge({ initialHabits }: DailyNudgeProps) {
   const [dismissed, setDismissed] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [monthlySavings, setMonthlySavings] = useState(0)
-  
-  useEffect(() => {
-    async function loadData() {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) {
-        setLoading(false)
-        return
-      }
-      
-      const { data: habits } = await supabase
-        .from('user_habits')
-        .select('monthly_savings')
-        .eq('user_id', user.id)
-        .single()
-      
-      if (habits) {
-        setMonthlySavings(habits.monthly_savings || 0)
-      }
-      
-      setLoading(false)
-    }
-    
-    loadData()
-  }, [])
-  
+  const monthlySavings = initialHabits?.monthly_savings ?? 0
+
   // Pick a consistent nudge based on the current date
   const nudge = useMemo(() => {
     const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24))
     const index = dayOfYear % nudgeTemplates.length
     const baseNudge = nudgeTemplates[index]
-    
+
     // Personalize finance nudges
     if (baseNudge.category === 'finance' && monthlySavings > 0) {
       const extraSavings = Math.round(monthlySavings * 0.1) // Suggest 10% more
@@ -116,12 +93,12 @@ export function DailyNudge() {
         impact: `Future you will have $${futureValue.toLocaleString()} more in 10 years thanks to compound growth`,
       }
     }
-    
+
     return baseNudge
   }, [monthlySavings])
-  
-  if (dismissed || loading) return null
-  
+
+  if (dismissed) return null
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -20 }}
@@ -133,7 +110,7 @@ export function DailyNudge() {
         <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
           {categoryIcons[nudge.category]}
         </div>
-        
+
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <Sparkles className="h-4 w-4 text-primary" />
@@ -144,7 +121,7 @@ export function DailyNudge() {
           <p className="font-semibold text-foreground">{nudge.message}</p>
           <p className="text-sm text-muted-foreground mt-1">{nudge.impact}</p>
         </div>
-        
+
         <Button
           variant="ghost"
           size="icon"
@@ -154,7 +131,7 @@ export function DailyNudge() {
           <X className="h-4 w-4" />
         </Button>
       </div>
-      
+
       {/* Decorative element */}
       <div className="absolute -right-8 -bottom-8 w-32 h-32 rounded-full bg-primary/5" />
     </motion.div>

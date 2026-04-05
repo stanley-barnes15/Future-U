@@ -1,17 +1,25 @@
 'use server'
 
-import { stripe } from '@/lib/stripe'
+import { getStripe } from '@/lib/stripe'
 import { getProduct, isPaidProduct } from '@/lib/products'
 import { createClient } from '@/lib/supabase/server'
+import { z } from 'zod'
+
+const checkoutSessionSchema = z.string().min(1)
 
 export async function createCheckoutSession(productId: string) {
-  const product = getProduct(productId)
+  const parsedProduct = z.string().min(1).safeParse(productId)
+  if (!parsedProduct.success) {
+    return { error: 'Invalid product id' }
+  }
+
+  const product = getProduct(parsedProduct.data)
 
   if (!product) {
     return { error: 'Product not found' }
   }
 
-  if (!isPaidProduct(productId)) {
+  if (!isPaidProduct(parsedProduct.data)) {
     return { error: 'Cannot checkout free product' }
   }
 
@@ -23,6 +31,7 @@ export async function createCheckoutSession(productId: string) {
   }
 
   try {
+    const stripe = getStripe()
     const session = await stripe.checkout.sessions.create({
       ui_mode: 'embedded',
       payment_method_types: ['card'],
@@ -35,8 +44,8 @@ export async function createCheckoutSession(productId: string) {
               description: product.description,
             },
             unit_amount: product.priceInCents,
-            recurring: product.interval !== 'one_time' 
-              ? { interval: product.interval } 
+            recurring: product.interval !== 'one_time'
+              ? { interval: product.interval }
               : undefined,
           },
           quantity: 1,
@@ -59,53 +68,17 @@ export async function createCheckoutSession(productId: string) {
 }
 
 export async function getCheckoutSession(sessionId: string) {
+  const parsed = checkoutSessionSchema.safeParse(sessionId)
+  if (!parsed.success) {
+    return { error: 'Invalid session id' }
+  }
+
   try {
-    const session = await stripe.checkout.sessions.retrieve(sessionId)
+    const stripe = getStripe()
+    const session = await stripe.checkout.sessions.retrieve(parsed.data)
     return { session }
   } catch (error) {
     console.error('Error retrieving session:', error)
     return { error: 'Failed to retrieve session' }
-  }
-}
-
-export async function updateSubscriptionStatus(sessionId: string) {
-  try {
-    const session = await stripe.checkout.sessions.retrieve(sessionId)
-    
-    if (session.payment_status !== 'paid') {
-      return { error: 'Payment not completed' }
-    }
-
-    const userId = session.metadata?.userId
-    const productId = session.metadata?.productId
-
-    if (!userId || !productId) {
-      return { error: 'Missing metadata' }
-    }
-
-    const supabase = await createClient()
-    
-    const { error } = await supabase
-      .from('subscriptions')
-      .upsert({
-        user_id: userId,
-        plan: 'pro',
-        status: 'active',
-        stripe_customer_id: session.customer as string,
-        stripe_subscription_id: session.subscription as string,
-        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      }, {
-        onConflict: 'user_id'
-      })
-
-    if (error) {
-      console.error('Error updating subscription:', error)
-      return { error: 'Failed to update subscription' }
-    }
-
-    return { success: true }
-  } catch (error) {
-    console.error('Error updating subscription:', error)
-    return { error: 'Failed to update subscription' }
   }
 }

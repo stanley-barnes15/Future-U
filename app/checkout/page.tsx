@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { Suspense, useCallback, useState } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
 import {
   EmbeddedCheckoutProvider,
@@ -17,6 +17,14 @@ const stripePromise = loadStripe(
 )
 
 export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<CheckoutLoadingState />}>
+      <CheckoutContent />
+    </Suspense>
+  )
+}
+
+function CheckoutContent() {
   const searchParams = useSearchParams()
   const productId = searchParams.get('product') || 'pro-monthly'
   const [error, setError] = useState<string | null>(null)
@@ -59,7 +67,7 @@ export default function CheckoutPage() {
           <Sparkles className="w-8 h-8 text-primary" />
           <span className="text-2xl font-bold text-foreground">Future You</span>
         </div>
-        
+
         <Card className="bg-card/80 backdrop-blur-sm border-border overflow-hidden">
           <CardHeader>
             <CardTitle className="text-xl text-foreground text-center">
@@ -76,6 +84,19 @@ export default function CheckoutPage() {
           </CardContent>
         </Card>
       </div>
+    </div>
+  )
+}
+
+function CheckoutLoadingState() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md bg-card/80 backdrop-blur-sm border-border">
+        <CardContent className="py-12 text-center">
+          <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading checkout…</p>
+        </CardContent>
+      </Card>
     </div>
   )
 }

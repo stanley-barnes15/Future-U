@@ -27,12 +27,26 @@ export default async function DashboardPage() {
     .eq('id', user.id)
     .single()
 
+  const { data: habits } = await supabase
+    .from('user_habits')
+    .select('*')
+    .eq('user_id', user.id)
+    .single()
+
+  const { data: goals } = await supabase
+    .from('user_goals')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: true })
+
   return (
     <SubscriptionProvider plan={plan}>
-      <DashboardContent 
-        user={user} 
+      <DashboardContent
+        user={user}
         profile={profile}
         subscription={subscription}
+        initialHabits={habits}
+        initialGoals={goals || []}
       />
     </SubscriptionProvider>
   )

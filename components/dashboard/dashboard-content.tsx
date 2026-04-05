@@ -3,11 +3,13 @@
 import { useState } from 'react'
 import { User } from '@supabase/supabase-js'
 import { useSubscription } from '@/lib/subscription-context'
+import { UserGoalRow, UserHabitsRow } from '@/lib/types'
 import { UpgradeBanner, FeatureLock } from '@/components/upgrade-banner'
 import { DailyNudge } from '@/components/dashboard/daily-nudge'
 import { StatsOverview } from '@/components/dashboard/stats-overview'
 import { FutureTimeline } from '@/components/dashboard/future-timeline'
 import { ScenarioComparison } from '@/components/dashboard/scenario-comparison'
+import { GoalRoadmap } from '@/components/dashboard/goal-roadmap'
 import { UserNav } from '@/components/dashboard/user-nav'
 import { OnboardingWizard } from '@/components/onboarding/onboarding-wizard'
 import { Sparkles } from 'lucide-react'
@@ -24,17 +26,19 @@ interface DashboardContentProps {
     plan: string
     status: string
   } | null
+  initialHabits: UserHabitsRow | null
+  initialGoals: UserGoalRow[]
 }
 
-export function DashboardContent({ user, profile, subscription }: DashboardContentProps) {
+export function DashboardContent({ user, profile, subscription, initialHabits, initialGoals }: DashboardContentProps) {
   const { isPro, plan } = useSubscription()
   const [showOnboarding, setShowOnboarding] = useState(!profile?.onboarding_completed)
 
   if (showOnboarding) {
     return (
-      <OnboardingWizard 
+      <OnboardingWizard
         userId={user.id}
-        onComplete={() => setShowOnboarding(false)} 
+        onComplete={() => setShowOnboarding(false)}
       />
     )
   }
@@ -52,8 +56,8 @@ export function DashboardContent({ user, profile, subscription }: DashboardConte
               </span>
             )}
           </div>
-          <UserNav 
-            user={user} 
+          <UserNav
+            user={user}
             profile={profile}
             plan={plan}
           />
@@ -76,27 +80,29 @@ export function DashboardContent({ user, profile, subscription }: DashboardConte
           </div>
 
           {isPro ? (
-            <DailyNudge />
+            <DailyNudge initialHabits={initialHabits} />
           ) : (
             <FeatureLock feature="Daily Personalized Nudges">
-              <DailyNudge />
+              <DailyNudge initialHabits={initialHabits} />
             </FeatureLock>
           )}
 
-          <StatsOverview isPro={isPro} />
+          <StatsOverview isPro={isPro} initialHabits={initialHabits} />
+
+          <GoalRoadmap goals={initialGoals} />
 
           <Tabs defaultValue="timeline" className="w-full">
             <TabsList className="bg-secondary/50">
               <TabsTrigger value="timeline">Future Timeline</TabsTrigger>
               <TabsTrigger value="scenarios">Scenario Comparison</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="timeline" className="mt-6">
-              <FutureTimeline isPro={isPro} />
+              <FutureTimeline isPro={isPro} initialHabits={initialHabits} />
             </TabsContent>
-            
+
             <TabsContent value="scenarios" className="mt-6">
-              <ScenarioComparison isPro={isPro} />
+              <ScenarioComparison isPro={isPro} initialHabits={initialHabits} />
             </TabsContent>
           </Tabs>
         </div>

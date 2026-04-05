@@ -1,14 +1,22 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { updateSubscriptionStatus } from '@/app/actions/stripe'
+import { getCheckoutSession } from '@/app/actions/stripe'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Sparkles, CheckCircle2, Loader2, PartyPopper } from 'lucide-react'
 import Link from 'next/link'
 
 export default function CheckoutSuccessPage() {
+  return (
+    <Suspense fallback={<LoadingShell />}>
+      <CheckoutSuccessContent />
+    </Suspense>
+  )
+}
+
+function CheckoutSuccessContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const sessionId = searchParams.get('session_id')
@@ -16,11 +24,16 @@ export default function CheckoutSuccessPage() {
 
   useEffect(() => {
     if (sessionId) {
-      updateSubscriptionStatus(sessionId).then((result) => {
-        if (result.error) {
+      getCheckoutSession(sessionId).then((result) => {
+        if (result.error || !result.session) {
           setStatus('error')
-        } else {
+          return
+        }
+
+        if (result.session.payment_status === 'paid' || result.session.status === 'complete') {
           setStatus('success')
+        } else {
+          setStatus('error')
         }
       })
     } else {
@@ -34,14 +47,14 @@ export default function CheckoutSuccessPage() {
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-chart-2/5 rounded-full blur-3xl" />
       </div>
-      
+
       <Card className="w-full max-w-md relative z-10 bg-card/80 backdrop-blur-sm border-border text-center">
         <CardHeader>
           <div className="flex items-center justify-center gap-2 mb-4">
             <Sparkles className="w-8 h-8 text-primary" />
             <span className="text-2xl font-bold text-foreground">Future You</span>
           </div>
-          
+
           {status === 'loading' && (
             <>
               <div className="flex justify-center mb-4">
@@ -55,7 +68,7 @@ export default function CheckoutSuccessPage() {
               </CardDescription>
             </>
           )}
-          
+
           {status === 'success' && (
             <>
               <div className="flex justify-center mb-4">
@@ -74,7 +87,7 @@ export default function CheckoutSuccessPage() {
               </CardDescription>
             </>
           )}
-          
+
           {status === 'error' && (
             <>
               <div className="flex justify-center mb-4">
@@ -89,14 +102,14 @@ export default function CheckoutSuccessPage() {
             </>
           )}
         </CardHeader>
-        
+
         <CardContent className="space-y-4">
           {status === 'success' && (
             <>
               <p className="text-sm text-muted-foreground">
                 You now have access to all Pro features including 10-year projections, unlimited scenarios, and daily personalized nudges.
               </p>
-              <Button 
+              <Button
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
                 onClick={() => router.push('/dashboard')}
               >
@@ -104,7 +117,7 @@ export default function CheckoutSuccessPage() {
               </Button>
             </>
           )}
-          
+
           {status === 'error' && (
             <div className="flex flex-col gap-2">
               <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
@@ -115,6 +128,19 @@ export default function CheckoutSuccessPage() {
               </Button>
             </div>
           )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function LoadingShell() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md bg-card/80 backdrop-blur-sm border-border text-center">
+        <CardContent className="py-10">
+          <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-3" />
+          <p className="text-muted-foreground">Loading payment confirmation...</p>
         </CardContent>
       </Card>
     </div>

@@ -4,12 +4,36 @@ export interface UserProfile {
   currentAge: number
   monthlyIncome: number
   monthlySavings: number
+  currentSavings: number
   savingsGoal: number
   exerciseFrequency: number // times per week
   sleepHours: number
   goals: Goal[]
   habits: Habit[]
   createdAt: Date
+}
+
+export interface UserHabitsRow {
+  user_id: string
+  current_age: number | null
+  monthly_income: number | null
+  monthly_savings: number | null
+  current_savings: number | null
+  savings_goal: number | null
+  exercise_frequency: number | null
+  sleep_hours: number | null
+}
+
+export interface UserGoalRow {
+  id: string
+  user_id: string
+  category: 'personal' | 'professional' | 'academic'
+  title: string
+  timeframe: string
+  ai_plan: {
+    milestones?: string[]
+    habits?: string[]
+  } | null
 }
 
 export interface Goal {
