@@ -3,7 +3,7 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Future You - See Your Tomorrow, Today',
+  title: 'Future U - See Your Tomorrow, Today',
   description: 'Visualize how your current habits shape your future in finances, health, productivity, and life goals.',
   generator: 'v0.app',
   icons: {

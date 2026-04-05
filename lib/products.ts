@@ -1,3 +1,5 @@
+import { Crown, Zap } from 'lucide-react'
+
 export interface Product {
   id: string
   name: string
@@ -5,6 +7,8 @@ export interface Product {
   priceInCents: number
   interval: 'month' | 'year' | 'one_time'
   features: string[]
+  icon: React.ElementType
+  popular?: boolean
 }
 
 export const PRODUCTS: Product[] = [
@@ -15,16 +19,17 @@ export const PRODUCTS: Product[] = [
     priceInCents: 0,
     interval: 'month',
     features: [
-      '1-year projections only',
-      'Basic financial forecast',
+      '1-year projections',
+      'Basic financial forecasting',
       'Limited scenario comparisons (2)',
       'Weekly nudges',
     ],
+    icon: Zap,
   },
   {
     id: 'pro-monthly',
     name: 'Pro Monthly',
-    description: 'Unlock the full power of Future You',
+    description: 'Unlock the full power of Future U',
     priceInCents: 999, // $9.99/month
     interval: 'month',
     features: [
@@ -32,29 +37,20 @@ export const PRODUCTS: Product[] = [
       'Advanced financial modeling',
       'Unlimited scenario comparisons',
       'Daily personalized nudges',
-      'Health & productivity insights',
-      'Export reports',
-    ],
-  },
-  {
-    id: 'pro-yearly',
-    name: 'Pro Yearly',
-    description: 'Best value - save 2 months!',
-    priceInCents: 9999, // $99.99/year
-    interval: 'year',
-    features: [
-      'Everything in Pro Monthly',
-      '2 months free',
+      'Goal tracking and milestones',
       'Priority support',
-      'Early access to new features',
+      'Export reports (coming soon)',
     ],
+    icon: Crown,
+    popular: true,
   },
 ]
 
-export function getProduct(id: string): Product | undefined {
-  return PRODUCTS.find((p) => p.id === id)
+export function getProduct(productId: string): Product | undefined {
+  return PRODUCTS.find((product) => product.id === productId)
 }
 
-export function isPaidProduct(id: string): boolean {
-  return id !== 'free'
+export function isPaidProduct(productId: string): boolean {
+  const product = getProduct(productId)
+  return !!product && product.priceInCents > 0
 }
